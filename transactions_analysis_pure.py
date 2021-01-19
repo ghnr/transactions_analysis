@@ -174,8 +174,8 @@ class TransactionListAnalysis:
             
             # Between previous lower bound and new lower bound:
             if transaction.transaction_day < window_start_day:
-                # "&=" used so that once max_changed is True, it will remain True
-                max_changed &= self.check_max_changed(transaction)
+                # "|=" bitwise "or" operator used so that once max_changed is True, it will remain True
+                max_changed |= self.check_max_changed(transaction)
                 # Subtract the totals and counts from the out of bounds transactions
                 self.update_totals(transaction, target_cols, SUBTRACTING)
                 self.update_average(transaction, SUBTRACTING)
