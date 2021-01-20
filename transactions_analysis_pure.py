@@ -74,12 +74,30 @@ class TransactionListAnalysis:
         Nested dictionary, each key is an Account ID, and each ID contains a dictionary of category totals and counts
         Returns: Dictionary of category totals and counts by account_id
         """
-        category_averages = defaultdict(lambda: {cat: {"total": 0, "count": 0} for cat in self.unique_categories})
+        # Compute totals and counts while iterating over transactions
+        category_totals = defaultdict(lambda: {cat: {"total": 0, "count": 0} for cat in self.unique_categories})
         
         for transaction in self.transactions:
-            category_averages[transaction.account_id][transaction.category]["total"] += transaction.transaction_amount
-            category_averages[transaction.account_id][transaction.category]["count"] += 1
+            category_totals[transaction.account_id][transaction.category]["total"] += transaction.transaction_amount
+            category_totals[transaction.account_id][transaction.category]["count"] += 1
             
+        # Compute averages based on the totals and counts calculated above
+
+        category_averages = defaultdict(lambda: {cat: 0 for cat in self.unique_categories})
+
+        for account_id, category_dict in category_totals.items():
+            for unique_category in self.unique_categories:
+                total_count_dict = category_dict.get(unique_category, {})
+                total = total_count_dict.get("total", 0)
+                count = total_count_dict.get("count", 0)
+        
+                try:
+                    average = total / count
+                except ZeroDivisionError:
+                    average = 0
+                    
+                category_averages[account_id][unique_category] = average
+        
         return category_averages
         
     @staticmethod
@@ -255,30 +273,22 @@ class TransactionListAnalysis:
             for day, total in daily_totals.items():
                 csv_writer.writerow((day, "%.2f" % total))
                 
-    def save_category_averages(self, filename: str, cat_averages: dict):
+    def save_category_averages(self, filename: str, category_averages: dict):
         """
         Writes a csv file of [Account ID, AA Total, ... , XX Total] (header) for each unique category with
         corresponding values per row
         """
         with open(filename, "w", newline="") as csv_file:
             csv_writer = csv.writer(csv_file, delimiter=',')
-            header = ["Account ID"] + [category + " Total" for category in self.unique_categories]
+            header = ["Account ID"] + [category + " Average" for category in self.unique_categories]
             csv_writer.writerow(header)
         
-            for account_id, category_dict in cat_averages.items():
+            for account_id, category_dict in category_averages.items():
                 
                 csv_row = [account_id]
                 
                 for unique_category in self.unique_categories:
-                    total_count_dict = category_dict.get(unique_category, {})
-                    total = total_count_dict.get("total", 0)
-                    count = total_count_dict.get("count", 0)
-                    
-                    try:
-                        average = total / count
-                    except ZeroDivisionError:
-                        average = 0
-                    
+                    average = category_dict.get(unique_category, 0)
                     csv_row.append("%.2f" % average)
                 
                 csv_writer.writerow(csv_row)
